@@ -1,0 +1,21 @@
+# Conda environment for ASPIRE Vision 2.0
+#   conda env create -f environment.yml
+#   conda activate aspire-vision2
+# GPU (NVIDIA) users: after creating the env, replace the CPU PyTorch that ultralytics
+# pulls in with a CUDA build from https://pytorch.org/get-started/locally/
+name: aspire-vision2
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - pandas
+  - pyyaml
+  - matplotlib
+  - pytest
+  - pip:
+      - opencv-python>=4.8
+      - supervision==0.26.1
+      - onnxruntime>=1.17
+      - ultralytics>=8.3

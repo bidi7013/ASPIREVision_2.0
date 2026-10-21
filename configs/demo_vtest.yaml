@@ -1,0 +1,45 @@
+# ASPIRE-Vision run configuration — DEMO on OpenCV's sample clip (vtest.avi).
+# This clip is ONLY for checking that the pipeline works end to end.
+# Replace with an approved USM recording or a licensed public dataset.
+# Coordinates are image-space pixels for a 768x576 frame.
+
+video: data/raw/vtest.avi
+location_code: DEMO-VTEST        # see data/recording_log.csv
+
+detector:
+  backend: auto                  # auto | ultralytics | onnx  (auto: by file extension)
+  model: models/yolov8n.pt       # or models/yolov8n.onnx (CPU, no PyTorch needed) — see README
+  conf: 0.25                     # min detection confidence passed to the tracker
+  iou: 0.5                       # NMS IoU
+  imgsz: 640
+  classes: [0]                   # COCO 0 = person
+
+tracker:
+  name: bytetrack
+  track_activation_threshold: 0.25
+  lost_track_buffer: 30          # frames a lost track is kept alive (30 @10fps = 3 s)
+  minimum_matching_threshold: 0.8
+  minimum_consecutive_frames: 1
+
+anchor: bottom_center            # point of the box tested against lines/zones (≈ feet)
+
+lines:
+  - id: L1
+    # p1 -> p2 direction defines sides: positive side = screen-RIGHT of p1->p2.
+    p1: [370, 440]               # bottom end (on the grass edge)
+    p2: [370, 170]               # top end (left of the lamp post — kept clear of the pole)
+    positive_label: left_to_right  # crossing from negative side to positive side
+    negative_label: right_to_left
+    band_px: 8                   # hysteresis half-width around the line
+    segment_margin_px: 10
+    min_track_hits: 3            # track must exist ≥3 frames before it can count
+    cooldown_frames: 10          # same track can't re-count on this line within 1 s
+
+zones:
+  - id: Z1
+    # occupancy region: the open tarmac right of the lamp post
+    polygon: [[450, 200], [700, 140], [768, 250], [768, 480], [560, 420], [450, 370]]
+
+output:
+  dir: runs
+  save_video: true

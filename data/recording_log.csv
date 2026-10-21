@@ -1,0 +1,2 @@
+location_code,video_file,split,date,start_time,duration_s,camera,resolution,fps,lighting,weather,occlusion_level,crowd_level,permission_ref,notes
+DEMO-VTEST,data/raw/vtest.avi,dev,unknown,unknown,79.5,static elevated,768x576,10,overcast daylight,dry,medium (lamp post; groups),low-medium,OpenCV sample data (smoke test only),Not campus data. Do not report results from this clip.

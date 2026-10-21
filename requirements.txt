@@ -1,0 +1,8 @@
+numpy>=1.24
+opencv-python>=4.8
+pyyaml>=6.0
+matplotlib>=3.7
+supervision==0.26.1      # ByteTrack implementation (numpy-only)
+onnxruntime>=1.17        # ONNX detector backend (CPU)
+ultralytics>=8.3         # YOLOv8 .pt backend (pulls in PyTorch)
+pytest>=8
