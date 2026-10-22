@@ -78,9 +78,10 @@ class OnnxYoloDetector(Detector):
 
     def __call__(self, frame_bgr):
         img, r, left, top = self._letterbox(frame_bgr)
+        # HWC BGR uint8 -> NCHW RGB float in [0, 1], the input layout YOLOv8 expects
         blob = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).transpose(2, 0, 1)[None].astype(np.float32) / 255.0
         out = self.sess.run(None, {self.inp: blob})[0][0].T  # (8400, 4 + n_classes)
-        scores = out[:, 4:]
+        scores = out[:, 4:]  # YOLOv8 has no objectness score: confidence = best class score
         cls = scores.argmax(1)
         conf = scores[np.arange(len(cls)), cls]
         keep = (conf >= self.conf) & np.isin(cls, list(self.classes))
@@ -89,6 +90,7 @@ class OnnxYoloDetector(Detector):
             return np.zeros((0, 4)), np.zeros(0), np.zeros(0, dtype=int)
         cx, cy, w, h = out[:, 0], out[:, 1], out[:, 2], out[:, 3]
         xyxy = np.stack([cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2], 1)
+        # undo the letterbox: remove the padding, then scale back to the original frame
         xyxy[:, [0, 2]] = (xyxy[:, [0, 2]] - left) / r
         xyxy[:, [1, 3]] = (xyxy[:, [1, 3]] - top) / r
         H, W = frame_bgr.shape[:2]

@@ -21,7 +21,7 @@ REQUIRED = {"line_id", "direction", "frame"}
 
 def load_annotations(path, fps: float | None = None) -> list[dict]:
     with open(path, newline="", encoding="utf-8") as f:
-        rows = [r for r in csv.DictReader(f) if any(v.strip() for v in r.values() if v)]
+        rows = [r for r in csv.DictReader(f) if any(v.strip() for v in r.values() if v)]  # skip blank rows
     if not rows:
         return []
     cols = set(rows[0].keys())
@@ -29,6 +29,7 @@ def load_annotations(path, fps: float | None = None) -> list[dict]:
         raise ValueError(f"annotation file needs columns {sorted(REQUIRED)} (or t_sec + fps); got {sorted(cols)}")
     out = []
     for r in rows:
+        # labels with only a timestamp are converted to a frame using the run's fps
         frame = int(r["frame"]) if r.get("frame") not in (None, "") else round(float(r["t_sec"]) * fps)
         out.append({**r, "frame": frame})
     return out
@@ -45,6 +46,7 @@ def match_events(gt_frames, pred_frames, tol):
         for j, p in enumerate(pred_frames)
         if abs(g - p) <= tol
     )
+    # closest pairs are taken first, so a near match is never lost to a farther one
     used_g, used_p, pairs = set(), set(), []
     for _, i, j in cands:
         if i in used_g or j in used_p:
@@ -64,7 +66,8 @@ def evaluate(run_dir, annotations_path, tol_sec: float = 1.0) -> dict:
     manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
     fps = manifest["video"]["fps"]
     n = manifest["video"]["frames_processed"]
-    tol = max(1, round(tol_sec * fps))
+    tol = max(1, round(tol_sec * fps))  # at least one frame of tolerance
+    # ignore labels past the frames this run processed (e.g. a --max-frames run)
     gt = [g for g in load_annotations(annotations_path, fps) if g["frame"] < n]
     with open(run_dir / "events.csv", newline="", encoding="utf-8") as f:
         pred = list(csv.DictReader(f))

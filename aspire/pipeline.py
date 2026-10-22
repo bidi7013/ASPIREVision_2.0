@@ -39,12 +39,13 @@ def file_sha256(path, limit_mb: int | None = None) -> str:
         while chunk := f.read(1 << 20):
             h.update(chunk)
             read += 1
-            if limit_mb and read >= limit_mb:
+            if limit_mb and read >= limit_mb:  # hash only the head so long videos stay fast
                 break
     return h.hexdigest()
 
 
 def config_hash(cfg: dict) -> str:
+    # sort_keys: the same settings always give the same hash, whatever their order in the YAML
     return hashlib.sha256(json.dumps(cfg, sort_keys=True).encode()).hexdigest()[:8]
 
 
@@ -60,7 +61,7 @@ def _versions() -> dict:
             m = __import__(mod)
             out[mod] = getattr(m, "__version__", "?")
         except Exception:
-            pass
+            pass  # optional backend not installed: leave it out of the manifest
     return out
 
 
@@ -108,6 +109,7 @@ def draw_overlay(frame, cfg, xyxy, tids, anchors, trails, totals):
     for ln in cfg["lines"]:
         cv2.line(frame, tuple(map(int, ln["p1"])), tuple(map(int, ln["p2"])), (0, 0, 255), 2)
     for (x1, y1, x2, y2), tid, a in zip(xyxy, tids, anchors):
+        # seeded by track ID, so each track keeps the same colour in every frame
         color = tuple(int(c) for c in np.random.default_rng(int(tid)).integers(64, 255, 3))
         cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
         cv2.putText(frame, f"#{tid}", (int(x1), int(y1) - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
@@ -141,14 +143,14 @@ def run(config_path, video_override=None, out_root=None, max_frames=None, save_v
     cap = cv2.VideoCapture(cfg["video"])
     if not cap.isOpened():
         raise FileNotFoundError(f"cannot open video: {cfg['video']}")
-    fps = cap.get(cv2.CAP_PROP_FPS) or float(cfg.get("fps_fallback", 25))
+    fps = cap.get(cv2.CAP_PROP_FPS) or float(cfg.get("fps_fallback", 25))  # some containers report 0 fps
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     W, H = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     started = datetime.now(timezone.utc)
     run_id = f"{cfg.get('location_code', 'LOC')}_{started.strftime('%Y%m%dT%H%M%SZ')}_{config_hash(cfg)}"
     run_dir = out_root / run_id
-    run_dir.mkdir(parents=True, exist_ok=False)
+    run_dir.mkdir(parents=True, exist_ok=False)  # never overwrite an earlier run
 
     detector = build_detector(cfg["detector"])
     tracker = build_tracker(cfg["tracker"], fps=fps)
@@ -189,6 +191,7 @@ def run(config_path, video_override=None, out_root=None, max_frames=None, save_v
                 break
             t_sec = round(frame_idx / fps, 3)
 
+            # time detection and tracking separately: the manifest reports each cost per frame
             a = time.perf_counter()
             xyxy, conf, cls = detector(frame)
             b = time.perf_counter()
@@ -205,7 +208,7 @@ def run(config_path, video_override=None, out_root=None, max_frames=None, save_v
                                    anchor_x=round(float(an[0]), 1), anchor_y=round(float(an[1]), 1),
                                    conf=round(float(cf), 3)))
                 trails.setdefault(int(tid), []).append((float(an[0]), float(an[1])))
-                trails[int(tid)] = trails[int(tid)][-40:]
+                trails[int(tid)] = trails[int(tid)][-40:]  # only the recent path is drawn
 
             for counter in counters:
                 for ev in counter.update(frame_idx, tids, anchors):

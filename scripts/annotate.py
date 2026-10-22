@@ -68,7 +68,7 @@ def main():
             cv2.line(view, tuple(map(int, ln["p1"])), tuple(map(int, ln["p2"])), col, 2)
             cv2.putText(view, ln["id"], tuple(map(int, ln["p2"])), cv2.FONT_HERSHEY_SIMPLEX, 0.6, col, 2)
         ln = lines[active]
-        here = [r for r in rows if abs(int(r["frame"]) - frame_no) <= 2]
+        here = [r for r in rows if abs(int(r["frame"]) - frame_no) <= 2]  # show labels near this frame
         hud = [f"frame {frame_no}/{n-1}  t={frame_no/fps:.2f}s  {'PLAY' if playing else 'PAUSE'}  labels={len(rows)}",
                f"line {ln['id']}:  [1] {ln['positive_label']}   [2] {ln['negative_label']}   [u]ndo [s]ave [q]uit"]
         hud += [f"  logged @{r['frame']}: {r['line_id']} {r['direction']}" for r in here]
@@ -78,6 +78,7 @@ def main():
         if a.scale != 1.0:
             view = cv2.resize(view, None, fx=a.scale, fy=a.scale)
         cv2.imshow("ASPIRE annotate", view)
+        # playing: wait one frame interval; paused: wait until a key is pressed
         key = cv2.waitKey(int(1000 / fps) if playing else 0) & 0xFF
 
         step = 0
@@ -105,10 +106,11 @@ def main():
             save(out, rows)
             break
         elif playing:
-            step = 1
+            step = 1  # no key pressed while playing: advance one frame
 
         if step:
             frame_no = max(0, min(n - 1, frame_no + step))
+            # a plain read for +1 is much faster than seeking; seek only for jumps
             nxt = read(frame_no) if step != 1 else (cap.read()[1])
             if nxt is None:
                 playing = False

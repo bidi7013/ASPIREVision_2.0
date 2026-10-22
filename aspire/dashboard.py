@@ -19,7 +19,7 @@ from pathlib import Path
 import cv2
 import matplotlib
 
-matplotlib.use("Agg")
+matplotlib.use("Agg")  # render plots to images; no display window needed
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
@@ -51,7 +51,7 @@ def _background(video, frame_no):
 def _trajectory_plot(manifest, tracks, events):
     cfg = manifest["config"]
     W, H = manifest["video"]["width"], manifest["video"]["height"]
-    bg = _background(cfg["video"], manifest["video"]["frames_processed"] // 2)
+    bg = _background(cfg["video"], manifest["video"]["frames_processed"] // 2)  # middle frame as backdrop
     fig, ax = plt.subplots(figsize=(8, 8 * H / W))
     if bg is not None:
         ax.imshow(bg, alpha=0.55)
@@ -73,7 +73,7 @@ def _trajectory_plot(manifest, tracks, events):
         ax.scatter(pts[:, 0], pts[:, 1], s=46, marker="o", edgecolor="white", linewidth=1.2,
                    color=PALETTE[k % len(PALETTE)], zorder=5, label=f"event: {d}")
     ax.set_xlim(0, W)
-    ax.set_ylim(H, 0)
+    ax.set_ylim(H, 0)  # image y grows downward
     ax.set_xticks([])
     ax.set_yticks([])
     ax.legend(loc="lower left", fontsize=8, framealpha=0.85)
@@ -89,6 +89,7 @@ def _timeseries_plot(manifest, events, occ):
     labels = sorted({e["direction"] for e in events}) or []
     for k, d in enumerate(labels):
         ts = sorted(float(e["t_sec"]) for e in events if e["direction"] == d)
+        # cumulative count: steps up by one at each event, held flat to the end of the video
         ax.step([0] + ts + [t_end], [0] + list(range(1, len(ts) + 1)) + [len(ts)], where="post",
                 color=PALETTE[k % len(PALETTE)], lw=2, label=d)
     ax.set_ylabel("cumulative crossings")

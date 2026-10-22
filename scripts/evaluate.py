@@ -7,7 +7,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # import aspire/ without installing it
 
 from aspire.dashboard import build_report  # noqa: E402
 from aspire.evaluate import evaluate  # noqa: E402
@@ -20,4 +20,4 @@ a = p.parse_args()
 
 rep = evaluate(a.run_dir, a.annotations, a.tol_sec)
 print(json.dumps(rep["overall"], indent=2))
-print(f"dashboard: {build_report(a.run_dir)}")
+print(f"dashboard: {build_report(a.run_dir)}")  # rebuilt so it shows the new evaluation.json

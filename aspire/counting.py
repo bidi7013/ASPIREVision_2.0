@@ -49,6 +49,7 @@ def signed_distance(p1, p2, pt) -> float:
     length = float(np.hypot(*d))
     if length == 0:
         raise ValueError("counting line has zero length")
+    # 2D cross product: its sign gives the side; dividing by the line length gives pixels
     cross = d[0] * (pt[1] - p1[1]) - d[1] * (pt[0] - p1[0])
     return cross / length
 
@@ -94,7 +95,7 @@ class LineCounter:
 
     def _within_segment(self, pt) -> bool:
         length = float(np.hypot(self.p2[0] - self.p1[0], self.p2[1] - self.p1[1]))
-        margin = self.segment_margin_px / length
+        margin = self.segment_margin_px / length  # px -> fraction of the segment, to compare with t
         t = projection_t(self.p1, self.p2, pt)
         return -margin <= t <= 1.0 + margin
 
@@ -130,6 +131,8 @@ class LineCounter:
                     or frame - st.last_event_frame >= self.cooldown_frames
                 )
             )
+            # update the side even when the event is suppressed, so a blocked crossing
+            # (too young, off-segment, in cooldown) can never fire later
             st.side = side
             if eligible:
                 st.last_event_frame = frame
@@ -163,8 +166,8 @@ class Zone:
         for i in range(n):
             xi, yi = poly[i]
             xj, yj = poly[j]
-            if (yi > y) != (yj > y):
-                x_cross = (xj - xi) * (y - yi) / (yj - yi) + xi
+            if (yi > y) != (yj > y):  # this edge straddles the horizontal ray through pt
+                x_cross = (xj - xi) * (y - yi) / (yj - yi) + xi  # where the edge meets that ray
                 if x < x_cross:
                     inside = not inside
             j = i
